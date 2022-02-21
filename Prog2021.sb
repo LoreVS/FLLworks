@@ -1,0 +1,1007 @@
+'=============================================================
+'Поворот вправо
+F.Start = GoDegWhite
+F.Function("GoDegWhite","port power DegDirection Color Cp Ci Cd logicstop Cg")
+Sub GoDegWhite
+  logicstop = F.Get("logicstop")
+  'Присвоєння значень змінним
+  Cg=F.Get("Cg")
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  port1 = F.Get("port")
+  Color1 = F.Get("Color")
+  power = F.Get("power")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  Chart = 10 ' Початкова потужність
+  For i = 0 To  Color1
+    If Chart < power Then 'Коли досяг заданої потужності прискорення припиняється
+      Chart = Chart + 0.5       
+    EndIf
+    'Викликаємо функцію ПІД
+    F.Call10("PID", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = Sensor.ReadRawValue(port1,0)
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = PIDBlack
+F.Function("PIDBlack","port side power Color Cp Ci Cd Pt It Dt lasterror") 
+Sub PIDBlack
+  Pt = F.Get("Pt")
+  It = F.Get("It")
+  Dt = F.Get("Dt")
+  powermotor = F.Get("power")
+  lasterror = F.Get("lasterror")
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  port = F.Get("port")
+  side = F.Get("side")
+  'Від заданого кута віднімаємо кут гіродатчика. Початкове значиння помилки 
+  error = side *  (F.Get("Color") - Sensor.ReadRawValue(port,0))
+  'ПІД регулятор
+  Pt = Cp * error
+  It = It + Ci * error
+  Dt = Cd * (error - lasterror)
+  correction = Pt + It + Dt
+  lasterror = error + lasterror
+  'Змінюємо потужність моторів
+  Motor.Start("C", powermotor - correction)
+  Motor.Start("B", powermotor + correction)
+  Motor.Start("B", powermotor + correction)
+  Motor.Start("C", powermotor - correction)
+EndSub
+
+F.Start = GoMMCol
+F.Function("GoMMCol","port side logicreset power Color Distance Cp Ci Cd logicstop")
+Sub GoMMCol
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  port1 = F.Get("port")
+  side1 = F.Get("side")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  Color1 = F.Get("Color")
+  Chart = 10 ' Початкова потужність
+  For i = 0 To Distance*1.8364 'Коефіцієнт переведення міліметрів в градуси оберта мотора
+    If Chart < power Then 'Коли досяг заданої потужності прискорення припиняється
+      Chart = Chart + 0.5       
+    EndIf
+    'Викликаємо функцію ПІД
+    F.Call11("PIDBlack",port1,side1, Chart, Color1, Cp, Ci, Cd, Pt, It, Dt, lasterror)
+    i = Motor.GetCount("C")
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = GoCol
+F.Function("GoCol","port portstop side power Color StopColor Cp Ci Cd logicstop")
+Sub GoCol
+  logicstop = F.Get("logicstop")
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  StopColor = F.Get("StopColor")
+  correction = 0
+  lasterror = 0
+  error = 0
+  port1 = F.Get("port")
+  portstop = F.Get("portstop")
+  side1 = F.Get("side")
+  Color1 = F.Get("Color")
+  Chart = 10 ' Початкова потужність
+  For i = -100 To -1 * StopColor
+    If Chart < power Then 'Коли досяг заданої потужності прискорення припиняється
+      Chart = Chart + 0.5       
+    EndIf
+    'Викликаємо функцію ПІД
+    F.Call11("PIDBlack",port1,side1, Chart, Color1, Cp, Ci, Cd, Pt, It, Dt, lasterror)
+    i =  -1 * Sensor.ReadRawValue(portstop,0)
+  EndFor
+  'Якщо значення зупинки = 1 зупиняє0мо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = GoWhiteCol
+F.Function("GoWhiteCol","port portstop side power Color StopColor Cp Ci Cd logicstop")
+Sub GoWhiteCol
+  logicstop = F.Get("logicstop")
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  StopColor = F.Get("StopColor")
+  correction = 0
+  lasterror = 0
+  error = 0
+  port1 = F.Get("port")
+  portstop = F.Get("portstop")
+  side1 = F.Get("side")
+  Color1 = F.Get("Color")
+  Chart = 10 ' Початкова потужність
+  For i = 0 To  StopColor
+    If Chart < power Then 'Коли досяг заданої потужності прискорення припиняється
+      Chart = Chart + 0.5       
+    EndIf
+    'Викликаємо функцію ПІД
+    F.Call11("PIDBlack",port1,side1, Chart, Color1, Cp, Ci, Cd, Pt, It, Dt, lasterror)
+    i =  Sensor.ReadRawValue(portstop,0)
+  EndFor
+  'Якщо значення зупинки = 1 зупиняє0мо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = TurnRight
+F.Function("TurnRight","power DegDirection Cg") 'Назва, Потужність, Кут, Коефіцієнт корекції
+Sub TurnRight
+  Cg=F.Get("Cg")
+  power = F.Get("power")
+  DegDirection = F.Get("DegDirection")
+  'Цикл поки гіродатчик не досягне заданого показника 
+  For i=Sensor.ReadRawValue(2,0) To DegDirection * Cg
+    i=Sensor.ReadRawValue(2,0)
+    'Обертаємо мотори В, С 
+    Motor.StartSync("BC",power,-power)
+  endfor
+  'Зупинка моторів
+  Motor.Stop("BC","True")
+  'Затримка
+  Program.Delay(200)
+  'Доворот вліво з меншою потужністю
+  For i=-1*(Sensor.ReadRawValue(2,0)) To -1*(DegDirection) * Cg
+    i=-1*(Sensor.ReadRawValue(2,0))
+    Motor.StartSync("BC",-12,12)
+  EndFor
+  'Зупинка
+  Motor.Stop("BC","True")
+  Program.Delay(200)
+endsub
+
+F.Start = TurnRight1
+F.Function("TurnRight1","power DegDirection motor Cg") 'Назва, Потужність, Кут, Коефіцієнт корекції
+Sub TurnRight1
+  motor=F.Get("motor")
+  Cg=F.Get("Cg")
+  power = F.Get("power")
+  DegDirection = F.Get("DegDirection")
+  If motor = 1 Then
+    'Цикл поки гіродатчик не досягне заданого показника 
+    For i=Sensor.ReadRawValue(2,0) To DegDirection * Cg
+      i=Sensor.ReadRawValue(2,0)
+      'Обертаємо мотор В
+      Motor.Start("B",power)
+    endfor
+    'Зупинка моторів
+    Motor.Stop("BC","True")
+    'Затримка
+    Program.Delay(200)
+    'Доворот вліво з меншою потужністю
+    For i=-1*(Sensor.ReadRawValue(2,0)) To -1*(DegDirection) * Cg
+      i=-1*(Sensor.ReadRawValue(2,0))
+      Motor.Start("B",-18)
+    EndFor
+    'Зупинка
+    Motor.Stop("BC","True")
+  endif
+  If motor = 2 Then
+    'Цикл поки гіродатчик не досягне заданого показника 
+    For i=Sensor.ReadRawValue(2,0) To DegDirection * Cg
+      i=Sensor.ReadRawValue(2,0)
+      'Обертаємо мотор C
+      Motor.Start("C",-power)
+    endfor
+    'Зупинка моторів
+    Motor.Stop("BC","True")
+    'Затримка
+    Program.Delay(200)
+    'Доворот вліво з меншою потужністю
+    For i=-1*(Sensor.ReadRawValue(2,0)) To -1*(DegDirection) * Cg
+      i=-1*(Sensor.ReadRawValue(2,0))
+      Motor.Start("C",18)
+    EndFor
+    'Зупинка
+    Motor.Stop("BC","True")
+    
+  EndIf
+endsub
+'===============================================0====
+'Поворот вліво
+F.Start = TurnLeft
+F.Function("TurnLeft","power DegDirection Cg") 'Назва, Потужність, Кут, Коефіцієнт корекції
+Sub TurnLeft
+  Cg=F.Get("Cg")
+  power = F.Get("power")
+  DegDirection = F.Get("DegDirection")
+  'Цикл поки гіродатчик не досягне заданого показника 
+  For i=-1*(Sensor.ReadRawValue(2,0)) To -1*(DegDirection)  * Cg
+    i=-1*(Sensor.ReadRawValue(2,0))
+    'Обертаємо мотори В, С     
+    Motor.StartSync("BC",-power,power)
+  endfor
+  'Зупинка моторів
+  Motor.Stop("BC","True")
+  Program.Delay(200)
+  'Доворот вправо з меншою потужністю
+  For i=Sensor.ReadRawValue(2,0) To DegDirection * Cg
+    i=Sensor.ReadRawValue(2,0)
+    Motor.StartSync("BC",12,-12)
+  EndFor
+  'Зупинка
+  Motor.Stop("BC","True")
+  Program.Delay(200)
+endsub
+
+F.Start = TurnLeft1
+F.Function("TurnLeft1","power DegDirection motor Cg") 'Назва, Потужність, Кут, Коефіцієнт корекції
+Sub TurnLeft1
+  motor=F.Get("motor")
+  Cg=F.Get("Cg")
+  power = F.Get("power")
+  DegDirection = F.Get("DegDirection")
+  If motor = 1 Then
+    'Цикл поки гіродатчик не досягне заданого показника 
+    For i=-1*(Sensor.ReadRawValue(2,0)) To -1*(DegDirection)  * Cg
+      i=-1*(Sensor.ReadRawValue(2,0))
+      'Обертаємо мотор В   
+      Motor.Start("B",-power)
+    endfor
+    'Зупинка моторів
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+    'Доворот вправо з меншою потужністю
+    For i=Sensor.ReadRawValue(2,0) To DegDirection * Cg
+      i=Sensor.ReadRawValue(2,0)
+      Motor.Start("B",18)
+    EndFor
+    'Зупинка
+    Motor.Stop("B","True")
+  EndIf
+  If motor = 2 Then
+    'Цикл поки гіродатчик не досягне заданого показника 
+    For i=-1*(Sensor.ReadRawValue(2,0)) To -1*(DegDirection)  * Cg
+      i=-1*(Sensor.ReadRawValue(2,0))
+      'Обертаємо мотор C  
+      Motor.Start("C",power)
+    endfor
+    'Зупинка моторів
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+    'Доворот вправо з меншою потужністю
+    For i=Sensor.ReadRawValue(2,0) To DegDirection * Cg
+      i=Sensor.ReadRawValue(2,0)
+      Motor.Start("C",-18)
+    EndFor
+    'Зупинка
+    Motor.Stop("C","True")
+    
+  EndIf
+endsub
+
+'===============================================================
+'Під регулятор. Їзда вперед
+'Назва, Потужність, Кут їзди, Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації
+'Початкові значення пропорційної, інтегральної, диференціальної частини, похибки, коефіцієнт калібровки гіродатчика
+F.Start = PID
+F.Function("PID","power DegDirection Cp Ci Cd Pt It Dt lasterror Cg") 
+Sub PID
+  Cg=F.Get("Cg")
+  Pt = F.Get("Pt")
+  It = F.Get("It")
+  Dt = F.Get("Dt")
+  powermotor = F.Get("power")
+  lasterror = F.Get("lasterror")
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  'Від заданого кута віднімаємо кут гіродатчика. Початкове значиння помилки 
+  error = F.Get("DegDirection") - Sensor.ReadRawValue(2,0) * Cg
+  'ПІД регулятор
+  Pt = Cp * error
+  It = It + Ci * error
+  Dt = Cd * (error - lasterror)
+  correction = Pt + It + Dt
+  lasterror = error + lasterror
+  'Змінюємо потужність моторів
+  Motor.Start("C", powermotor - correction)
+  Motor.Start("B", powermotor + correction)
+  Motor.Start("B", powermotor + correction)
+  Motor.Start("C", powermotor - correction)
+EndSub
+
+'================================================================
+'ПІД регулятор їзда назад
+'Назва, Потужність, Кут їзди, Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації
+'Початкові значення пропорційної, інтегральної, диференціальної частини, похибки, коефіцієнт калібровки гіродатчика
+F.Start = PIDBack
+F.Function("PIDBack","power DegDirection Cp Ci Cd Pt It Dt lasterror Cg")
+Sub PIDBack
+  Cg=F.Get("Cg")
+  Pt = F.Get("Pt")
+  It = F.Get("It")
+  Dt = F.Get("Dt")
+  powermotor = F.Get("power")
+  lasterror = F.Get("lasterror")
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  'Від заданого кута віднімаємо кут гіродатчика. Початкове значиння помилки 
+  error = F.Get("DegDirection") - Sensor.ReadRawValue(2,0) * Cg
+  'ПІД регулятор 
+  Pt = Cp * error
+  It = It + Ci * error
+  Dt = Cd * (error - lasterror)
+  correction = Pt + It + Dt
+  lasterror = error + lasterror
+  'Змінюємо потужність моторів
+  Motor.Start("C", -powermotor - correction)
+  Motor.Start("B", -powermotor + correction)
+  Motor.Start("B", -powermotor + correction)
+  Motor.Start("C", -powermotor - correction)
+EndSub
+'================================================================
+'ПІД регулятор реверс гіродатчика та моторів, в перевернутому стані робот їде вперед так як назад
+'Назва, Потужність, Кут їзди, Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації
+'Початкові значення пропорційної, інтегральної, диференціальної частини, похибки, коефіцієнт калібровки гіродатчика
+'Гіродадчик з протилежним значенням
+F.Start = PIDreverse
+F.Function("PIDreverse","power DegDirection Cp Ci Cd Pt It Dt lasterror Cg")
+Sub PIDreverse
+  Cg=F.Get("Cg")
+  Pt = F.Get("Pt")
+  It = F.Get("It")
+  Dt = F.Get("Dt")
+  powermotor = F.Get("power")
+  lasterror = F.Get("lasterror")
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  'Від заданого кута віднімаємо кут гіродатчика. Початкове значиння помилки 
+  error = -F.Get("DegDirection") - Sensor.ReadRawValue(2,0) * Cg
+  'ПІД регулятор 
+  Pt = Cp * error
+  It = It + Ci * error
+  Dt = Cd * (error - lasterror)
+  correction = Pt + It + Dt
+  lasterror = error + lasterror
+  'Змінюємо потужність моторів
+  Motor.Start("C", -powermotor - correction)
+  Motor.Start("B", -powermotor + correction)
+  Motor.Start("B", -powermotor + correction)
+  Motor.Start("C", -powermotor - correction)
+EndSub
+
+'==================================================================
+'Їзда вперед з повільним прискоренням на початку
+'Назва, Логічне значення обнулення значень моторів, Потужність, Кут їзди, Дистанція в мм, 
+'Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації, зупинка моторів, коефіцієнт калібровки
+F.Start = GoDegMM
+F.Function("GoDegMM","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub GoDegMM
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Cg=F.Get("Cg")
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  Chart = 10 ' Початкова потужність
+  For i = 0 To Distance*1.8364 'Коефіцієнт переведення міліметрів в градуси оберта мотора
+    If Chart < power Then 'Коли досяг заданої потужності прискорення припиняється
+      Chart = Chart + 0.5       
+    EndIf
+    'Викликаємо функцію ПІД
+    F.Call10("PID", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = Motor.GetCount("C")
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = GoDegBlack
+F.Function("GoDegBlack","port power DegDirection Color Cp Ci Cd logicstop Cg")
+Sub GoDegBlack
+  logicstop = F.Get("logicstop")
+  'Присвоєння значень змінним
+  Cg=F.Get("Cg")
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  port1 = F.Get("port")
+  Color1 = F.Get("Color")
+  power = F.Get("power")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  Chart = 10 ' Початкова потужність
+  For i = -100 To -1 * Color1
+    If Chart < power Then 'Коли досяг заданої потужності прискорення припиняється
+      Chart = Chart + 0.5       
+    EndIf
+    'Викликаємо функцію ПІД
+    F.Call10("PID", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = -1 * Sensor.ReadRawValue(port1,0)
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+'==================================================================
+'Їзда вперед без прискорення на початку
+'Назва, Логічне значення обнулення значень моторів, Потужність, Кут їзди, Дистанція в мм, 
+'Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації, зупинка моторів, коефіцієнт калібровки
+F.Start = GoDegMMconst
+F.Function("GoDegMMconst","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub GoDegMMconst
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  For i = 0 To Distance*1.8364 'Коефіцієнт переведення міліметрів в градуси оберта мотора
+    'Викликаємо функцію ПІД
+    F.Call10("PID", power, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = Motor.GetCount("C")
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+'==================================================================
+'Їзда вперед з одночасним крутінням моторів маніпуляторів
+'Назва, Логічне значення обнулення значень моторів, Потужність, Кут їзди, Дистанція в мм, 
+'Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації, зупинка моторів, коефіцієнт калібровки
+F.Start = GoDegMMwithAD
+F.Function("GoDegMMwithAD","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg power2")
+Sub GoDegMMwithAD
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  power2 = F.Get("power2")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  For i = 0 To Distance*1.8364 'Коефіцієнт переведення міліметрів в градуси оберта мотора
+    'Викликаємо функцію ПІД
+    F.Call10("PID", power, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = Motor.GetCount("C")
+    'Крутимо мотори А, D
+    Motor.StartSync("AD",-power2,power2)
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Motor.Stop("AD","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+'==================================================================
+'Їзда в перевернутому вигляді
+'Назва, Логічне значення обнулення значень моторів, Потужність, Кут їзди, Дистанція в мм, 
+'Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації, зупинка моторів, коефіцієнт калібровки
+F.Start = GoDegMMreverse
+F.Function("GoDegMMreverse","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub GoDegMMreverse
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  Chart = 5 ' Початкова потужність
+  For i = 0 To Distance*1.8364 'Коефіцієнт переведення міліметрів в градуси оберта мотора
+    If Chart < power Then 'Коли досяг заданої потужності, прискорення припиняється
+      Chart = Chart + 0.5       
+    EndIf
+    'Викликаємо функцію ПІД 
+    F.Call10("PIDreverse", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = -1*Motor.GetCount("C")
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+'==================================================================
+'Ізда по заданому часу
+'Назва, Логічне значення обнулення значень моторів, Потужність, Кут їзди, Дистанція в мс, 
+'Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації, зупинка моторів, коефіцієнт калібровки
+F.Start = GoTime
+F.Function("GoTime","logicreset power DegDirection Time Cp Ci Cd logicstop Cg")
+Sub GoTime
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Time = F.Get("Time")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  'Викликаємо функцію ПІД 
+  F.Call10("PID", power, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+  Program.Delay(Time)
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+'==================================================================
+'Їзда назад з повільним прискоренням на початку
+'Назва, Логічне значення обнулення значень моторів, Потужність, Кут їзди, Дистанція в мм, 
+'Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації, зупинка моторів, коефіцієнт калібровки
+F.Start = BackDegMM
+F.Function("BackDegMM","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub BackDegMM 
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  Chart = 5 ' Початкова потужність
+  For i = 0 To Distance*1.8364 'Коефіцієнт переведення міліметрів в градуси оберта мотора
+    If Chart < power Then 'Коли досяг заданої потужності, прискорення припиняється
+      Chart = Chart + 0.5       
+    EndIf
+    'Викликаємо функцію ПІД 
+    F.Call10("PIDBack", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = -1*Motor.GetCount("C")
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+'==================================================================
+'Їзда назад без повільного прискорення на початку
+'Назва, Логічне значення обнулення значень моторів, Потужність, Кут їзди, Дистанція в мм, 
+'Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації, зупинка моторів, коефіцієнт калібровки
+F.Start = BackDegMMconst
+F.Function("BackDegMMconst","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub BackDegMMconst 
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  For i = 0 To Distance*1.8364 'Коефіцієнт переведення міліметрів в градуси оберта мотора
+    'Викликаємо функцію ПІД 
+    F.Call10("PIDBack", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = -1*Motor.GetCount("C")
+  EndFor
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+'==================================================================
+'Їзда назад по заданому часц
+'Назва, Логічне значення обнулення значень моторів, Потужність, Кут їзди, Дистанція в мс, 
+'Коефіцієнт пропорційності, Коефіцієнт інтеграції, Коефіцієнт диференціації, зупинка моторів, коефіцієнт калібровки
+F.Start = BackTime
+F.Function("BackTime","logicreset power DegDirection Time Cp Ci Cd logicstop Cg")
+Sub BackTime
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  'Якщо logicreset =1 обнуляємо мотори
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  'Присвоєння значень змінним
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Time = F.Get("Time")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  'Викликаємо функцію ПІД
+  F.Call10("PIDBack", power, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+  Program.Delay(Time)
+  'Якщо значення зупинки = 1 зупиняємо мотори
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+'=================================================================
+'Калібровка гіродатчика
+F.Start = CalGyro
+F.Function("CalGyro","allo")
+Sub CalGyro
+  allo=F.Get("allo")
+  'Їдемо вперед
+  F.Call9("GoDegMM", 1, 60, 0, 130, 1, 0.001, 0.0002, 1, 1)
+  'Зупиняємо мотори
+  Motor.Stop("BC","True")
+  'Поветаємо на 360 
+  F.Call3("TurnRight",40, 360,1)
+  'Обнуляємо мотори
+  Motor.ResetCount("BC")
+  power=50
+  'їдемо в борт
+  For i=0 to 3200
+    Motor.Start("BC",-30)
+    i=i+1
+  endfor
+  Motor.Stop("BC","True")
+  'Відкриваємо файли для запису коефіцієнта калібровки гіродатчика
+  handle=EV3File.OpenWrite("2/gyro.txt")
+  'Відкриваємо допоміжний файл для місії Стеки
+  handle1=EV3File.OpenWrite("2/Black.txt")
+  'Обраховуємо коефіцієнт калібровки
+  cc[0] = 1-((Sensor.ReadRawValue(2,0)-360)/360)
+  Black[0] = 0
+  'Записуємо дані у файли
+  EV3File.WriteNumberArray(handle,1,cc)
+  EV3File.WriteNumberArray(handle1,1,Black)
+EndSub
+'==============================================================
+'Перемикання сенсорів в потрібний режим
+Sensor.SetMode(1,0)
+Sensor.SetMode(2,0)
+Sensor.SetMode(3,2)
+Sensor.SetMode(4,0)
+Motor.Invert("B")
+A[0] = Sensor.ReadRawValue(3,0)
+
+'Якщо робот не баче кольорів викликається блок калібровки гіродатчика
+If A[0] = 0 Then 
+  F.Call1("CalGyro",1)
+  LCD.Clear()
+  'Відкриваємо файли для читання та отримання даних з файла
+  handle=EV3File.OpenRead("2/gyro.txt")
+  Cgy=EV3File.ReadNumberArray(handle,1)
+  handle1=EV3File.OpenRead("2/Black.txt")
+  Black=EV3File.ReadNumberArray(handle1,1)
+  'Виведення на екран блока
+  LCD.Write(10,40,Cgy[0])
+  LCD.Write(10,60,Black[0])
+  Program.Delay(1000)
+endif
+
+LCD.Clear()
+handle=EV3File.OpenRead("2/gyro.txt")
+Cgy=EV3File.ReadNumberArray(handle,1)
+handle1=EV3File.OpenRead("2/Black.txt")
+Black=EV3File.ReadNumberArray(handle1,1)
+LCD.Write(10,40,Cgy[0])
+LCD.Write(10,60,Black[0])
+
+If A[0] = 1 Then 'чорний
+  If Black[0] = 1 Then
+    F.Call9("GoDegMM", 1, 40,0, 960,1, 0.001, 0.0002, 1,Cgy[0])
+    F.Call4("TurnLeft1",30, -45,2,Cgy[0])
+    F.Call9("GoDegMM", 1, 25,-45, 110,1, 0.001, 0.0002, 1,Cgy[0])
+    F.Call9("BackDegMM", 1, 25,-45, 55, 1, 0.001, 0.0002, 1,Cgy[0])
+    F.Call4("TurnRight1",30, 0,2,Cgy[0])
+    F.Call9("BackDegMM", 1, 25,0, 20, 1, 0.001, 0.0002, 1,Cgy[0])
+    F.Call4("TurnRight1",30, 92,2,Cgy[0])
+    F.Call9("BackDegMM", 1, 25,Sensor.ReadRawValue(2,0), 130, 0.5, 0.001, 0.0002, 1,1)
+    motor.MoveSync("AD",-100,-100,10000,"True")
+  EndIf
+  If Black[0] = 0 Then
+    motor.Start("BC",100)
+    Program.Delay(2000)
+    motor.Stop("BC","True")
+    F.Call9("BackDegMM", 1, 90,0, 1250, 1, 0.001, 0.0002, 1,1)
+    handle1=EV3File.OpenWrite("2/Black.txt")
+    Black[0] = 1
+    EV3File.WriteNumberArray(handle1,1,Black)
+  EndIf
+endif
+
+If A[0] = 2 Then 'Синій
+  F.Call9("GoDegMM", 1, 35,0, 450,1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnLeft",25,-25,Cgy[0])
+  F.Call9("GoDegMM", 1, 35,-25, 70,1, 0.001, 0.0002, 0,Cgy[0])
+  F.Call9("GoDegBlack",4, 30, -25, 10, 1, 0.001, 0.0002, 0,Cgy[0])
+  F.Call10("GoMMCol",4, 1,1, 22, 50, 330, 0.5, 0.001, 0.0002, 0)
+  F.Call10("GoCol",4,1,1, 22, 50, 10, 0.5, 0.001, 0.0002, 1)
+  F.Call3("TurnLeft",25,(Sensor.ReadRawValue(2,0)-48),1)
+  F.Call9("GoDegMM", 1, 25,Sensor.ReadRawValue(2,0), 165, 1, 0.001, 0.0002, 1,1)
+  motor.Move("C",-30,90,"True")
+  motor.Move("A",100,180,"True")
+  Program.Delay(300)
+  motor.Move("C",30,90,"True")
+  F.Call9("BackDegMM", 1, 25,Sensor.ReadRawValue(2,0), 190, 1, 0.001, 0.0002, 1,1)
+  F.Call4("TurnRight1",30,40,1,Cgy[0])
+  F.Call10("GoMMCol",4, 1, 1, 30, 50, 540, 0.6, 0.001, 0.0001, 0)
+  F.Call10("GoCol",4,1,1, 27, 50, 10, 0.5, 0.001, 0.0002, 0)
+  F.Call9("GoDegMM", 1, 25,Sensor.ReadRawValue(2,0), 30, 1, 0.001, 0.0002, 1,1)
+  F.Call3("TurnLeft1",25,(Sensor.ReadRawValue(2,0)-90),2,1)
+  F.Call9("GoDegMM", 1, 25,Sensor.ReadRawValue(2,0), 20,1, 0.001, 0.0002, 1,1)
+  motor.Move("D",100,1250,"True")
+  F.Call9("BackDegMM", 1, 25,Sensor.ReadRawValue(2,0), 55, 1, 0.001, 0.0002, 1,1)
+  F.Call3("TurnRight",30, (Sensor.ReadRawValue(2,0)+50),1)
+  F.Call9("BackDegMM", 1, 25,Sensor.ReadRawValue(2,0), 45, 1, 0.001, 0.0002, 1,1)
+  F.call3("TurnLeft",30,(Sensor.ReadRawValue(2,0)-130),Cgy[0])
+  F.Call9("GoDegMM", 1, 25,Sensor.ReadRawValue(2,0), 95, 1, 0.001, 0.0002, 1,1)
+  F.Call3("TurnLeft1",25,-145,2,Cgy[0])
+  F.Call10("GoMMCol",1, 4,1, 30, 50, 200, 0.4, 0.001, 0.0002, 0)
+  F.Call10("GoCol",1,4,1, 18, 50, 10, 0.4, 0.001, 0.0002, 1)
+  F.Call9("BackDegMM", 1, 25,Sensor.ReadRawValue(2,0), 50, 1, 0.001, 0.0002, 1,1)
+  F.Call3("TurnLeft1",25,-235,2,Cgy[0])
+  F.Call9("GoDegMM", 1, 25,-235, 150, 1, 0.001, 0.0002, 1,1)
+  Motor.ResetCount("D")
+  F.Call9("BackDegMM", 1, 25,Sensor.ReadRawValue(2,0), 20, 1, 0.001, 0.0002, 1,1)
+  motor.Move("D",-100,1600,"True")
+  F.Call9("BackDegMM", 1, 25,-235, 260, 1, 0.001, 0.0002, 1,1)
+  Motor.ResetCount("D")
+  motor.Move("D",100,1700,"True")
+  F.Call9("GoDegMM", 1, 30,-235, 300, 1, 0.001, 0.0002, 1,1)
+  F.Call9("BackDegMM", 1, 30,-235, 300, 1, 0.001, 0.0002, 1,1)
+  F.Call9("GoDegBlack",1, 30, -235, 10, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call9("BackDegMM", 1, 30,-235, 20, 1, 0.001, 0.0002, 1,1)
+  F.Call3("TurnRight",30, -145,1)
+  F.Call10("GoMMCol",1, 4, -1, 30, 50, 220, 0.6, 0.001, 0.0001, 1)
+  F.Call10("GoCol",1,4,1, 22, 50, 10, 0.5, 0.001, 0.0001, 1)
+  motor.Move("A",-100,180,"True")
+  F.Call10("GoMMCol",1,1,1, 30, 50, 400, 0.5, 0.001, 0.0002, 1)
+  motor.ResetCount("C")
+  For i = motor.GetCount("C") To 600
+   motor.Start("BC",20)
+   motor.Start("A",30)
+  EndFor 
+ F.Call9("GoDegMM", 1, 25,Sensor.ReadRawValue(2,0), 100, 1, 0.001, 0.0002, 1,1)
+ motor.Start("A",-100)
+ Program.Delay(600)
+  motor.Stop("A","True")
+  F.Call9("GoDegMM", 1, 25,Sensor.ReadRawValue(2,0), 60, 1, 0.001, 0.0002, 1,1)
+  F.Call3("TurnLeft",30,-235,Cgy[0])
+  motor.MoveSync("BC",100,56,2000,"False")
+endif
+
+If A[0] = 4 Then 'Жовтий
+  F.Call9("GoDegMM", 1, 50,0, 690,1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call4("TurnLeft1",35, -90,2,Cgy[0])  
+  F.Call9("GoDegMM", 1, 50,-90, 450,1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call9("BackDegMM", 1, 50, -90, 470, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call4("TurnLeft1",35, -190,2,Cgy[0])  
+  F.Call9("GoDegMM", 1, 75,-190, 1100,1, 0.001, 0.0002, 1,Cgy[0])
+  
+  
+endif
+
+
+If A[0] = 3 Then 'Зелений
+  F.Call9("GoDegMM", 1, 50,0, 2000, 1, 0.001, 0.0002, 1,Cgy[0])
+  motor.StartSync("AD",-100,-60)
+  Program.Delay(2000)
+  motor.Start("D",100)
+  Program.Delay(600)
+  motor.Stop("D","True")
+  F.Call9("BackDegMM", 1, 30, 0, 300, 1, 0.001, 0.0002, 1,Cgy[0])
+  motor.Start("D",-45)
+  Program.Delay(1500)
+  motor.Stop("D","True")
+  F.Call9("BackDegMM", 1, 80, -5, 1250, 1, 0.001, 0.0002, 1,Cgy[0])
+endif
+
+If A[0] = 5 Then 'Червоний
+  F.Call9("GoDegBlack",4, 35,0, 20, 1, 0.001, 0.0002, 0,Cgy[0])
+  F.Call10("GoMMCol",4, -1,1, 25, 50, 200, 0.7, 0.001, 0.0002, 1)
+  motor.Move("C",25,235,"False")
+  F.Call10("GoMMCol",4, -1,1, 25, 50, 450, 0.7, 0.001, 0.0002, 0)
+  F.Call10("GoCol",4,1,-1, 23, 50, 10, 0.5, 0.001, 0.0002, 1)
+  Program.Delay(200)
+  motor.Move("D",30,180,"True")
+  F.Call9("BackDegMM", 1, 25, Sensor.ReadRawValue(2,0), 60, 1, 0.001, 0.0002, 1,1)
+  Program.Delay(200)
+  F.Call9("BackDegMM", 1, 25, Sensor.ReadRawValue(2,0), 30, 1, 0.001, 0.0002, 1,1)
+  F.Call4("TurnLeft1",30,-100,2,Cgy[0])
+  motor.Start("BC",18)
+  Program.Delay(600)
+  F.Call9("BackDegMM", 1, 20, Sensor.ReadRawValue(2,0), 17, 1, 0.001, 0.0002, 1,1)
+  
+  Motor.Start("A",-40)
+  Program.Delay(1200)
+  motor.MoveSync("BC",-100,-100, 20, "True")
+  Program.Delay(1200)
+  motor.MoveSync("BC",-100,-100, 20, "True")
+  Motor.Start("A",-40)
+  Program.Delay(1200)
+  
+  F.Call9("BackDegMM", 1, 25, Sensor.ReadRawValue(2,0), 250, 1, 0.001, 0.0002, 1,1)
+  F.Call4("TurnRight1",35,-2,2,Cgy[0])
+  F.Call9("GoDegMM", 1, 35, -28, 290, 1, 0.001, 0.0002, 1,Cgy[0])
+  Motor.Start("A",65)
+  Program.Delay(600)
+  F.Call9("BackDegMM", 1, 30, Sensor.ReadRawValue(2,0), 150, 1, 0.001, 0.0002, 1,1)
+  F.Call3("TurnLeft",40,-130,Cgy[0])
+  F.Call9("GoDegMM", 1, 60, -130, 1000, 1, 0.001, 0.0002, 1,Cgy[0])
+    
+  
+endif
+
+If A[0] = 6 Then 'Білий
+  F.Call9("GoDegMM", 1, 35,0, 400, 1, 0.002, 0.0002, 0,Cgy[0])
+  motor.Move("B",65,150,"True")
+  motor.MoveSync("BC",-30,-30,20,"True")
+  motor.MoveSync("AD",70,-70,100,"True")
+  Program.Delay(1000)
+  F.Call9("BackDegMM", 1, 30, Sensor.ReadRawValue(2,0), 60, 1, 0.001, 0.0002, 0,1)
+  motor.MoveSync("BC",-55,-100,1200,"True")
+endif
+
+
+
+'F.Call3("TurnLeft",40,0,Cgy[0])
+'F.Call3("TurnRight",40, 0,Cgy[0])
+'F.Call4("TurnLeft1",40,0,1,Cgy[0])
+'F.Call4("TurnRight1",40, 0,1,Cgy[0])
+'F.Call9("GoDegMM", 1, 40,0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("GoDegMMconst", 1, 40,0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("GoTime", 1, 30, 0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("GoDegMMreverse", 1, 40, 0, 1130, 5, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("BackDegMM", 1, 30, 0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("BackDegMMconst", 1, 30,0, 1000, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("BackTime", 1, 30,0, 300, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call1("CalGyro",1)
+'F.Call10("GoMMCol",4, 1, 1, 30, 50, 500, 0.5, 0.001, 0.0002, 0)
+'F.Call10("GoCol",4,1,1, 20, 50, 10, 0.5, 0.001, 0.0002, 1)
+'F.Call9("GoDegBlack",4, 35,0, 20, 1, 0.001, 0.0002, 0,Cgy[0])
+'F.Call9("GoDegWhite",4, 35,0, 20, 1, 0.001, 0.0002, 0,Cgy[0])

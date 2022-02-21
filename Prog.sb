@@ -1,0 +1,613 @@
+F.Start = TurnRight
+F.Function("TurnRight","power DegDirection Cg")
+Sub TurnRight
+  Cg=F.Get("Cg")
+  power = F.Get("power")
+  DegDirection = F.Get("DegDirection")
+  For i=Sensor.ReadRawValue(2,0) To DegDirection * Cg
+    i=Sensor.ReadRawValue(2,0)
+    Motor.StartSync("BC",power,-power)
+  endfor
+  Motor.Stop("BC","True")
+  Program.Delay(200)
+  For i=-1*(Sensor.ReadRawValue(2,0)) To -1*(DegDirection) * Cg
+    i=-1*(Sensor.ReadRawValue(2,0))
+    Motor.StartSync("BC",-7,7)
+  EndFor
+  Motor.Stop("BC","True")
+  Program.Delay(200)
+endsub
+
+F.Start = TurnLeft
+F.Function("TurnLeft","power DegDirection Cg")
+Sub TurnLeft
+  Cg=F.Get("Cg")
+  power = F.Get("power")
+  DegDirection = F.Get("DegDirection")
+  For i=-1*(Sensor.ReadRawValue(2,0)) To -1*(DegDirection)  * Cg
+    i=-1*(Sensor.ReadRawValue(2,0))
+    Motor.StartSync("BC",-power,power)
+  endfor
+  Motor.Stop("BC","True")
+  Program.Delay(200)
+  For i=Sensor.ReadRawValue(2,0) To DegDirection * Cg
+    i=Sensor.ReadRawValue(2,0)
+    Motor.StartSync("BC",7,-7)
+  EndFor
+  Motor.Stop("BC","True")
+  Program.Delay(200)
+endsub
+
+F.Start = PID
+F.Function("PID","power DegDirection Cp Ci Cd Pt It Dt lasterror Cg")
+Sub PID
+  Cg=F.Get("Cg")
+  Pt = F.Get("Pt")
+  It = F.Get("It")
+  Dt = F.Get("Dt")
+  powermotor = F.Get("power")
+  lasterror = F.Get("lasterror")
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  error = F.Get("DegDirection") - Sensor.ReadRawValue(2,0) * Cg
+  Pt = Cp * error
+  It = It + Ci * error
+  Dt = Cd * (error - lasterror)
+  correction = Pt + It + Dt
+  lasterror = error + lasterror
+  Motor.Start("C", powermotor - correction)
+  Motor.Start("B", powermotor + correction)
+  Motor.Start("B", powermotor + correction)
+  Motor.Start("C", powermotor - correction)
+EndSub
+
+F.Start = PIDBack
+F.Function("PIDBack","power DegDirection Cp Ci Cd Pt It Dt lasterror Cg")
+Sub PIDBack
+  Cg=F.Get("Cg")
+  Pt = F.Get("Pt")
+  It = F.Get("It")
+  Dt = F.Get("Dt")
+  powermotor = F.Get("power")
+  lasterror = F.Get("lasterror")
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  error = F.Get("DegDirection") - Sensor.ReadRawValue(2,0) * Cg
+  Pt = Cp * error
+  It = It + Ci * error
+  Dt = Cd * (error - lasterror)
+  correction = Pt + It + Dt
+  lasterror = error + lasterror
+  Motor.Start("C", -powermotor - correction)
+  Motor.Start("B", -powermotor + correction)
+  Motor.Start("B", -powermotor + correction)
+  Motor.Start("C", -powermotor - correction)
+EndSub
+
+F.Start = PIDreverse
+F.Function("PIDreverse","power DegDirection Cp Ci Cd Pt It Dt lasterror Cg")
+Sub PIDreverse
+  Cg=F.Get("Cg")
+  Pt = F.Get("Pt")
+  It = F.Get("It")
+  Dt = F.Get("Dt")
+  powermotor = F.Get("power")
+  lasterror = F.Get("lasterror")
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  error = -F.Get("DegDirection") - Sensor.ReadRawValue(2,0) * Cg
+  Pt = Cp * error
+  It = It + Ci * error
+  Dt = Cd * (error - lasterror)
+  correction = Pt + It + Dt
+  lasterror = error + lasterror
+  Motor.Start("C", -powermotor - correction)
+  Motor.Start("B", -powermotor + correction)
+  Motor.Start("B", -powermotor + correction)
+  Motor.Start("C", -powermotor - correction)
+EndSub
+
+F.Start = GoDegMM
+F.Function("GoDegMM","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub GoDegMM
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  Cg=F.Get("Cg")
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  Chart = 5
+  For i = 0 To Distance*1.8364
+    If Chart < power Then
+      Chart = Chart + 0.5       
+    EndIf
+    F.Call10("PID", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = Motor.GetCount("C")
+  EndFor
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = GoDegMMconst
+F.Function("GoDegMMconst","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub GoDegMMconst
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  For i = 0 To Distance*1.8364
+    F.Call10("PID", power, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = Motor.GetCount("C")
+  EndFor
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = GoDegMMwithAD
+F.Function("GoDegMMwithAD","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg power2")
+Sub GoDegMMwithAD
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  power2 = F.Get("power2")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  For i = 0 To Distance*1.8364
+    F.Call10("PID", power, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = Motor.GetCount("C")
+    Motor.StartSync("AD",-power2,power2)
+  EndFor
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Motor.Stop("AD","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = GoDegMMreverse
+F.Function("GoDegMMreverse","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub GoDegMMreverse
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  Chart = 5
+  For i = 0 To Distance*1.8364
+    If Chart < power Then
+      Chart = Chart + 0.5       
+    EndIf
+    F.Call10("PIDreverse", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = -1*Motor.GetCount("C")
+  EndFor
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = GoTime
+F.Function("GoTime","logicreset power DegDirection Time Cp Ci Cd logicstop Cg")
+Sub GoTime
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Time = F.Get("Time")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  F.Call10("PID", power, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+  Program.Delay(Time)
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = BackDegMM
+F.Function("BackDegMM","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub BackDegMM 
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  Chart = 5
+  For i = 0 To Distance*1.8364
+    If Chart < power Then
+      Chart = Chart + 0.5       
+    EndIf
+    F.Call10("PIDBack", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = -1*Motor.GetCount("C")
+  EndFor
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = BackDegMMconst
+F.Function("BackDegMMconst","logicreset power DegDirection Distance Cp Ci Cd logicstop Cg")
+Sub BackDegMMconst 
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Distance = F.Get("Distance")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  For i = 0 To Distance*1.8364
+    F.Call10("PIDBack", Chart, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+    i = -1*Motor.GetCount("C")
+  EndFor
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+F.Start = BackTime
+F.Function("BackTime","logicreset power DegDirection Time Cp Ci Cd logicstop Cg")
+Sub BackTime
+  Cg=F.Get("Cg")
+  logicreset = F.Get("logicreset")
+  logicstop = F.Get("logicstop")
+  If logicreset = 1 Then
+    Motor.ResetCount("BC")
+  EndIf
+  Pt = 0 
+  It = 0
+  Dt = 0
+  Cp = F.Get("Cp")
+  Ci = F.Get("Ci")
+  Cd = F.Get("Cd")
+  power = F.Get("power")
+  Time = F.Get("Time")
+  correction = 0
+  lasterror = 0
+  error = 0
+  DegDirection = F.Get("DegDirection")
+  F.Call10("PIDBack", power, DegDirection, Cp, Ci, Cd, Pt, It, Dt, lasterror, Cg)
+  Program.Delay(Time)
+  If logicstop = 1 Then
+    Motor.Stop("BC","True")
+    Program.Delay(200)
+  EndIf
+EndSub
+
+
+F.Start = CalGyro
+F.Function("CalGyro","allo")
+Sub CalGyro
+  allo=F.Get("allo")
+  F.Call9("GoDegMM", 1, 60, 0, 130, 1, 0.001, 0.0002, 1, 1)
+  Motor.Stop("BC","True")
+  F.Call3("TurnRight",40, 360,1)
+  Motor.ResetCount("BC")
+  power=50
+  For i=0 to 3200
+    Motor.Start("BC",-30)
+    i=i+1
+  endfor
+  Motor.Stop("BC","True")
+  handle=EV3File.OpenWrite("2/gyro.txt")
+  handle1=EV3File.OpenWrite("2/build.txt")
+  cc[0] = 1-((Sensor.ReadRawValue(2,0)-360)/360)
+  Build[0] = 0
+  EV3File.WriteNumberArray(handle,1,cc)
+  EV3File.WriteNumberArray(handle1,1,Build)
+EndSub
+
+'==============================================================
+'==============================================================
+
+Sensor.SetMode(1,2)
+Sensor.SetMode(2,0)
+Sensor.SetMode(3,0)
+Sensor.SetMode(4,2)
+Motor.Invert("B")
+A[0] = Sensor.ReadRawValue(1,0)
+B[0] = Sensor.ReadRawValue(4,0)
+
+If A[0] = 0 Then 
+  F.Call1("CalGyro",1)
+  LCD.Clear()
+  handle=EV3File.OpenRead("2/gyro.txt")
+  Cgy=EV3File.ReadNumberArray(handle,1)
+  handle1=EV3File.OpenRead("2/build.txt")
+  Build=EV3File.ReadNumberArray(handle1,1)
+  LCD.Write(10,40,Cgy[0])
+  LCD.Write(10,60,Build[0])
+  Program.Delay(1000)
+endif
+
+LCD.Clear()
+handle=EV3File.OpenRead("2/gyro.txt")
+Cgy=EV3File.ReadNumberArray(handle,1)
+handle1=EV3File.OpenRead("2/build.txt")
+Build=EV3File.ReadNumberArray(handle1,1)
+LCD.Write(10,40,Cgy[0])
+LCD.Write(10,60,Build[0])
+
+If A[0] = 1 Then
+  If B[0] = 1 Then
+    bridge()
+  endif
+endif
+
+If A[0] = 1 Then
+  If B[0] = 2 Then
+    Tree()
+  endif
+endif
+
+If A[0] = 2 Then
+  If B[0] = 2 Then
+    kran()
+  endif
+endif
+
+
+If A[0] = 4 Then
+  If B[0] = 3 Then
+    Zator()
+  endif
+endif
+
+
+If A[0] = 3 Then
+  If B[0] = 4 Then
+    Build()
+  endif
+endif
+
+If A[0] = 5 Then
+  If B[0] = 5 Then
+    domic()   
+  endif
+endif
+
+if A[0] = 4 Then
+  If B[0] = 2 Then
+    metal()
+    
+  endif
+endif
+
+
+Sub kran
+  F.Call9("GoDegMM", 1, 40, 3, 450, 1, 0.001, 0.0002, 0,Cgy[0])
+  F.Call9("GoDegMM", 1, 40, -2, 400, 1.4, 0.001, 0.0002, 0,Cgy[0])
+  Program.Delay(500)
+  F.Call9("BackDegMM", 1, 80, 5, 800, 1, 0.001, 0.0002, 1,Cgy[0])
+Endsub
+
+Sub Tree
+
+  F.Call9("GoDegMM", 1, 30, 1, 775, 1, 0.001, 0.0002, 1,Cgy[0])
+  Motor.Move("A",80,2600,"True")
+  Program.Delay(1000)
+  F.Call9("GoDegMM", 1, 30, 1, 77, 1, 0.001, 0.0002, 1,Cgy[0])
+  Motor.Move("D",100,950,"True")
+  Program.Delay(1000)
+  Motor.Move("A",-80,2600,"True")
+  F.Call9("BackDegMM", 1, 50, 1, 850, 1, 0.001, 0.0002, 1,Cgy[0])
+ 
+Endsub
+
+Sub Build
+  handle1=EV3File.OpenWrite("2/build.txt")
+  If Build[0] = 0 Then
+    Build[0] = 1
+    EV3File.WriteNumberArray(handle1,1,Build)
+    F.Call9("GoDegMM", 1, 40, 0, 450, 1, 0.001, 0.0002, 1,Cgy[0])
+    F.Call9("BackDegMM", 1, 80, 0, 450, 1, 0.001, 0.0002, 1,Cgy[0])
+  Else
+    If Build[0] = 1 Then 
+      Build[0] = 2
+      EV3File.WriteNumberArray(handle1,1,Build)
+      F.Call9("GoDegMM", 1, 40, 0, 450, 1, 0.001, 0.0002, 1,Cgy[0])
+      F.Call9("BackDegMM", 1, 80, 0, 450, 1, 0.001, 0.0002, 1,Cgy[0])
+    Else
+      If Build[0] = 2 Then 
+        Build[0] = 0
+        EV3File.WriteNumberArray(handle1,1,Build)
+        F.Call9("GoDegMM", 1, 40, 0, 650, 1, 0.001, 0.0002, 1,Cgy[0])
+        F.Call9("BackDegMM", 1, 80, 0, 650, 1, 0.001, 0.0002, 1,Cgy[0])
+      EndIf
+    EndIf
+  EndIf
+EndSub 
+
+Sub Zator
+  F.Call9("BackDegMM", 1, 40,0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnLeft",20,-40,Cgy[0])
+  F.Call9("BackDegMM", 1, 40,-40, 540, 1, 0.001, 0.0002, 1,Cgy[0])
+  Program.Delay(500)
+  F.Call9("GoDegMM", 1, 30, -45, 395, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnLeft",20,-90,Cgy[0])
+  F.Call9("GoDegMM", 1, 25, -90, 175, 1, 0.001, 0.0002, 1,Cgy[0])
+  Program.Delay(1000)
+  Motor.MoveSync("AD",15,-20,500,"True")
+  F.Call9("GoDegMM", 1, 20, -90, 95, 1, 0.001, 0.0002, 1,Cgy[0])
+  Program.Delay(700)
+  F.Call9("BackDegMM", 1, 20, -90, 15, 1, 0.001, 0.0002, 1,Cgy[0])
+  Program.Delay(1000)
+  F.Call9("BackDegMM", 1, 40, -90, 150, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnRight",40,0,Cgy[0])
+  F.Call9("GoDegMM", 1, 90, -5, 1300, 1, 0.001, 0.0002, 1,Cgy[0])
+EndSub
+Sub domic
+  F.Call9("GoDegMM", 1, 45, 0, 400, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnRight",15,45,Cgy[0]) 
+  F.Call9("GoDegMM", 1, 45, 45, 1200, 1, 0.001, 0.0002, 1,Cgy[0])
+  Motor.Move("A",-100,540,"True")
+  Program.Delay(500)
+  F.Call9("BackDegMM", 1, 45, 44, 210, 1, 0.001, 0.0002, 1,Cgy[0]) 
+  F.Call9("GoDegMM", 1, 45, 44, 150, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call9("BackDegMM", 1, 90, 48, 150, 1, 0.001, 0.0002, 1,Cgy[0]) 
+  Motor.Move("A",100,530,"True")
+  F.Call9("BackDegMM", 1, 90, 48, 2000, 1, 0.001, 0.0002, 1,Cgy[0])
+EndSub
+Sub metal
+  Motor.MoveSync("AD",-20,20,200,"True")  
+  F.Call9("GoDegMM", 1, 45, 0, 400, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnRight",25,45,Cgy[0]) 
+  F.Call9("GoDegMM", 1, 45, 45, 900, 1, 0.001, 0.0002, 1,Cgy[0]) 
+  F.Call3("TurnLeft",25,-45,Cgy[0])
+  F.Call9("GoDegMM", 1, 45, -45, 300, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnLeft",10,-70,Cgy[0])
+  F.Call9("GoDegMM", 1, 45, -70, 260, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnRight",25,46,Cgy[0])  
+  Motor.MoveSync("AD",20,-20,200,"True")
+  F.Call9("GoDegMM", 1, 30, 46, 130, 1, 0.001, 0.0002, 1,Cgy[0])
+  Motor.MoveSync("AD",-15,15,120,"True")
+  Program.Delay(300)
+  F.Call9("GoDegMM", 1, 30, 46, 105, 1, 0.001, 0.0002, 1,Cgy[0])
+  Motor.MoveSync("AD",-15,15,440,"True")
+  Motor.Stop("AD","True")
+  Program.Delay(300)
+  F.Call9("GoDegMM", 1, 20, 46, 100, 1, 0.001, 0.0002, 0,Cgy[0])
+  F.Call9("GoDegMM", 1, 20, 46, 175, 1, 0.001, 0.0002, 1,Cgy[0])
+  Program.Delay(400)
+  F.Call9("BackDegMM", 1, 30, 46, 150, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnLeft",12,-20,Cgy[0])
+  F.Call9("BackDegMM", 1, 20, -20, 55, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnLeft",12,-80,Cgy[0])
+  Program.Delay(400)
+  F.Call9("GoDegMM", 1, 30, -80, 50, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnRight",25,-27,Cgy[0]) 
+  F.Call9("BackDegMM", 1, 60, -27, 625, 1, 0.001, 0.0002, 1,Cgy[0])
+  F.Call3("TurnRight",25,35,Cgy[0]) 
+  F.Call9("BackDegMM", 1, 80, 35, 1200, 1, 0.001, 0.0002, 1,Cgy[0])
+EndSub  
+Sub bridge
+  For i=0 to 1
+    i=0
+    If Sensor.ReadPercent(3) > 50 Then
+      Sensor.SetMode(2,1)
+      Sensor.SetMode(2,0)
+      F.Call9("GoDegMMreverse", 1, 40, 0, 1090, 5, 0.001, 0.0002, 1,Cgy[0])
+      
+      For i=Sensor.ReadRawValue(2,0) To 116 * Cgy[0]
+        i=Sensor.ReadRawValue(2,0)
+        Motor.Start("C",-40)
+      endfor
+      Motor.Stop("BC","True")
+      Program.Delay(200)
+      For i=-1*(Sensor.ReadRawValue(2,0)) To -1*119 * Cgy[0]
+        i=-1*(Sensor.ReadRawValue(2,0))
+        Motor.Start("C",20)
+      EndFor
+      Motor.Stop("BC","True")
+      Program.Delay(200) 
+      F.Call9("GoDegMMreverse", 1, 50, -119, 935, 5, 0.001, 0.0002, 1,Cgy[0])
+      i= 1
+    endif
+  endfor
+EndSub
+
+'F.Call3("TurnLeft",40,0,Cgy[0])
+'F.Call3("TurnRight",40, 0,Cgy[0])
+'F.Call9("GoDegMM", 1, 40,0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("GoDegMMconst", 1, 40,0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("GoTime", 1, 30, 0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("GoDegMMreverse", 1, 40, 0, 1130, 5, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("BackDegMM", 1, 30, 0, 700, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("BackDegMMconst", 1, 30,0, 1000, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call9("BackTime", 1, 30,0, 300, 1, 0.001, 0.0002, 1,Cgy[0])
+'F.Call1("CalGyro",1)
